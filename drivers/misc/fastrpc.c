@@ -23,6 +23,7 @@
 #include <uapi/misc/fastrpc.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/bits.h>
+#include <linux/iommu.h>
 
 #define ADSP_DOMAIN_ID (0)
 #define MDSP_DOMAIN_ID (1)
@@ -1585,6 +1586,13 @@ static int fastrpc_device_release(struct inode *inode, struct file *file)
 	unsigned long flags;
 
 	fastrpc_release_current_dsp_process(fl);
+	if (fl->sctx && fl->sctx->dev) {
+		struct iommu_domain *domain =
+			iommu_get_domain_for_dev(fl->sctx->dev);
+
+		if (domain)
+			iommu_flush_iotlb_all(domain);
+	}
 
 	spin_lock_irqsave(&cctx->lock, flags);
 	list_del(&fl->user);
